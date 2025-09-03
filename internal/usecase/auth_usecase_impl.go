@@ -120,6 +120,18 @@ func (uc *authUsecase) RefreshTokens(ctx context.Context, refreshToken string) (
 		return "", "", fmt.Errorf("failed to get blizzard token: %w", err)
 	}
 
+	if time.Now().After(blizzardToken.Expiry) {
+		newBt, err := uc.blizzardAd.RefreshToken(ctx, blizzardToken.RefreshToken)
+		if err != nil {
+			return "", "", err
+		}
+
+		if err := uc.dbAd.SaveBlizzardToken(ctx, userIDStr, newBt.BlizzardID, newBt); err != nil {
+			return "", "", err
+		}
+		blizzardToken = newBt
+	}
+
 	bUser, err := uc.blizzardAd.GetUser(ctx, blizzardToken.AccessToken)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get blizzard user: %w", err)

@@ -107,3 +107,22 @@ func (br *blizzardRepository) GetUser(ctx context.Context, token string) (*entit
 
 	return bu, nil
 }
+
+func (br *blizzardRepository) RefreshToken(ctx context.Context, refreshToken string) (*entity.BlizzardToken, error) {
+	if refreshToken == "" {
+		return nil, fmt.Errorf("empty token")
+	}
+
+	ts := br.oauth.TokenSource(ctx, &oauth2.Token{RefreshToken: refreshToken})
+	newToken, err := ts.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.BlizzardToken{
+		AccessToken:  newToken.AccessToken,
+		RefreshToken: newToken.RefreshToken,
+		TokenType:    newToken.TokenType,
+		Expiry:       newToken.Expiry,
+	}, nil
+}
