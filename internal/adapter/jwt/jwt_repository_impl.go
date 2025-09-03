@@ -75,3 +75,38 @@ func (jr *jwtRepository) ValidateJWT(tokenStr string) (*jwt.Token, error) {
 
 	return token, nil
 }
+
+func (jr *jwtRepository) GetUserIDByToken(token string) (any, error) {
+	jwtToken, err := jr.ValidateJWT(token)
+	if jwtToken != nil && !jwtToken.Valid {
+		return "", err
+	}
+
+	claims, ok := jwtToken.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("failed parse claims")
+	}
+
+	tokenType, ok := claims["typ"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid toke type")
+	}
+
+	switch tokenType {
+	case "refresh":
+		userID, ok := claims["sub"].(string)
+		if !ok {
+			return nil, fmt.Errorf("failed to extract user ID")
+		}
+		return userID, nil
+	case "access":
+
+		blizzardID, ok := claims["sub"].(float64)
+		if !ok {
+			return nil, fmt.Errorf("failed to extract blizzard ID")
+		}
+		return int(blizzardID), nil
+	default:
+		return nil, fmt.Errorf("unsupported token type: %s", tokenType)
+	}
+}

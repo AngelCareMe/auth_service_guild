@@ -7,8 +7,10 @@ import (
 	"auth-service/internal/entity"
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
+	jwtPkg "github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -91,4 +93,88 @@ func (uc *authUsecase) HandleCallback(ctx context.Context, code string) (string,
 	}
 
 	return jwtAccess, jwtRefresh, nil
+}
+
+func (uc *authUsecase) RefreshTokens(ctx context.Context, refreshToken string) (string, string, error) {
+	if refreshToken == "" {
+		return "", "", fmt.Errorf("empty token")
+	}
+
+	token, err := uc.jwtAd.ValidateJWT(refreshToken)
+	if err != nil && !token.Valid {
+		return "", "", err
+	}
+
+	userID, err := uc.jwtAd.GetUserIDByToken(refreshToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		return "", "", fmt.Errorf("invalid user ID type")
+	}
+
+	blizzardToken, err := uc.dbAd.GetBlizzardToken(ctx, userIDStr)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get blizzard token: %w", err)
+	}
+
+	bUser, err := uc.blizzardAd.GetUser(ctx, blizzardToken.AccessToken)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get blizzard user: %w", err)
+	}
+
+	newAccess, err := uc.jwtAd.GenerateAccessJWT(bUser.ID)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	newRefresh, err := uc.jwtAd.GenerateRefreshJWT(userIDStr)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	jwtTokenEntity := &entity.JWTToken{
+		UserID:       userIDStr,
+		BattleTag:    bUser.BattleTag,
+		AccessToken:  newAccess,
+		RefreshToken: newRefresh,
+		Expiry:       time.Now().Add(30 * 24 * time.Hour),
+	}
+
+	if err := uc.dbAd.SaveJWTToken(ctx, userIDStr, bUser.BattleTag, jwtTokenEntity); err != nil {
+		return "", "", fmt.Errorf("failed to save jwt tokens: %w", err)
+	}
+
+	return newAccess, newRefresh, nil
+}
+
+func (uc *authUsecase) ValidateAccess(ctx context.Context, accessToken string) (int, error) {
+	token, err := uc.jwtAd.ValidateJWT(accessToken)
+	if err != nil {
+		return 0, err
+	}
+
+	claims, ok := token.Claims.(jwtPkg.MapClaims)
+	if !ok {
+		return 0, fmt.Errorf("invalid claims")
+	}
+
+	typ, ok := claims["typ"].(string)
+	if !ok || typ != "access" {
+		return 0, fmt.Errorf("invalid type")
+	}
+
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return 0, fmt.Errorf("no sub in token")
+	}
+
+	blizzardID, err := strconv.Atoi(sub)
+	if err != nil {
+		return 0, err
+	}
+
+	return blizzardID, nil
 }
