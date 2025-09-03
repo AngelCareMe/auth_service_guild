@@ -1,11 +1,14 @@
 package entity
 
-import "time"
+import (
+	"time"
+)
 
 type BlizzardToken struct {
-	UserID       int
-	AccessToken  string
-	RefreshToken string
-	Expiry       time.Time
-	TokenType    string
+	UserID       string    `json:"user_id" db:"battletag"`
+	BlizzardID   int       `json:"blizzard_id" db:"blizzard_id"`
+	AccessToken  string    `json:"access_token" db:"access_token"`
+	RefreshToken string    `json:"refresh_token" db:"refresh_token"`
+	Expiry       time.Time `json:"expiry" db:"expiry"`
+	TokenType    string    `json:"token_type" db:"token_type"`
 }

@@ -1,0 +1,94 @@
+package usecase
+
+import (
+	"auth-service/internal/adapter/blizzard"
+	"auth-service/internal/adapter/jwt"
+	"auth-service/internal/adapter/postgres"
+	"auth-service/internal/entity"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
+)
+
+type authUsecase struct {
+	jwtAd      jwt.JWTRepository
+	blizzardAd blizzard.BlizzardRepository
+	dbAd       postgres.PostgresRepository
+	log        *logrus.Logger
+}
+
+func NewAuthUsecase(
+	jwtAd jwt.JWTRepository,
+	blizzardAd blizzard.BlizzardRepository,
+	dbAd postgres.PostgresRepository,
+	log *logrus.Logger,
+) *authUsecase {
+	return &authUsecase{
+		jwtAd:      jwtAd,
+		blizzardAd: blizzardAd,
+		dbAd:       dbAd,
+		log:        log,
+	}
+}
+
+func (uc *authUsecase) HandleCallback(ctx context.Context, code string) (string, string, error) {
+	if code == "" {
+		return "", "", fmt.Errorf("empty code")
+	}
+
+	bt, err := uc.blizzardAd.HandleCallback(ctx, code)
+	if err != nil {
+		return "", "", err
+	}
+
+	bUser, err := uc.blizzardAd.GetUser(ctx, bt.AccessToken)
+	if err != nil {
+		return "", "", err
+	}
+
+	if err := uc.dbAd.SaveBlizzardUser(ctx, bUser.ID, bUser.BattleTag); err != nil {
+		return "", "", err
+	}
+
+	existingUser, err := uc.dbAd.GetUser(ctx, bUser.BattleTag)
+	var userID string
+	if err == nil && existingUser != nil {
+		userID = existingUser.ID
+	} else {
+		userID = uuid.NewString()
+		if err := uc.dbAd.SaveUser(ctx, userID, bUser.BattleTag); err != nil {
+			return "", "", err
+		}
+	}
+
+	if err := uc.dbAd.SaveBlizzardToken(ctx, userID, bt.BlizzardID, bt); err != nil {
+		return "", "", err
+	}
+
+	jwtAccess, err := uc.jwtAd.GenerateAccessJWT(bUser.ID)
+	if err != nil {
+		return "", "", err
+	}
+
+	jwtRefresh, err := uc.jwtAd.GenerateRefreshJWT(userID)
+	if err != nil {
+		return "", "", err
+	}
+
+	jwt := &entity.JWTToken{
+		UserID:       userID,
+		BattleTag:    bUser.BattleTag,
+		AccessToken:  jwtAccess,
+		RefreshToken: jwtRefresh,
+		Expiry:       time.Now().Add(30 * 24 * time.Hour),
+	}
+
+	if err := uc.dbAd.SaveJWTToken(ctx, userID, bUser.BattleTag, jwt); err != nil {
+		return "", "", err
+	}
+
+	return jwtAccess, jwtRefresh, nil
+}
