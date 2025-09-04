@@ -190,3 +190,26 @@ func (uc *authUsecase) ValidateAccess(ctx context.Context, accessToken string) (
 
 	return blizzardID, nil
 }
+
+func (uc *authUsecase) GetUser(ctx context.Context, jwtAccess string) (*entity.BlizzardUser, error) {
+	if jwtAccess == "" {
+		return nil, fmt.Errorf("empty token")
+	}
+
+	userID, err := uc.jwtAd.GetUserIDByToken(jwtAccess)
+	if err != nil {
+		return nil, err
+	}
+
+	jwtToken, err := uc.dbAd.GetJWTToken(ctx, userID.(string))
+	if err != nil {
+		return nil, err
+	}
+
+	bUser, err := uc.dbAd.GetBlizzardUser(ctx, jwtToken.BattleTag)
+	if err != nil {
+		return nil, err
+	}
+
+	return bUser, nil
+}

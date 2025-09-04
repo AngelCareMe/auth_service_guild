@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/spf13/viper"
@@ -8,28 +9,28 @@ import (
 
 type Config struct {
 	Server struct {
-		Host string `mapstructure:"SERVER_HOST"`
-		Port int    `mapstructure:"SERVER_PORT"`
-	}
+		Host string `mapstructure:"host"`
+		Port int    `mapstructure:"port"`
+	} `mapstructure:"server"`
 	DB struct {
-		User    string `mapstructure:"DB_USER"`
-		Pass    string `mapstructure:"DB_PASS"`
-		Host    string `mapstructure:"DB_HOST"`
-		Port    int    `mapstructure:"DB_PORT"`
-		Name    string `mapstructure:"DB_NAME"`
-		SSLMode string `mapstructure:"SSL_MODE"`
-	}
+		User    string `mapstructure:"user"`
+		Pass    string `mapstructure:"pass"`
+		Host    string `mapstructure:"host"`
+		Port    int    `mapstructure:"port"`
+		Name    string `mapstructure:"name"`
+		SSLMode string `mapstructure:"sslmode"`
+	} `mapstructure:"db"`
 	Logger struct {
-		Level string `mapstructure:"LOGGER_LEVEL"`
-	}
+		Level string `mapstructure:"level"`
+	} `mapstructure:"logger"`
 	Blizzard struct {
-		ClientID     string `mapstructure:"CLIENT_ID"`
-		ClientSecret string `mapstructure:"CLIENT_SECRET"`
-		RedirectURL  string `mapstructure:"REDIRECT_URL"`
-	}
+		ClientID     string `mapstructure:"client_id"`
+		ClientSecret string `mapstructure:"client_secret"`
+		RedirectURL  string `mapstructure:"redirect_url"`
+	} `mapstructure:"blizzard"`
 	JWT struct {
-		Secret string `mapstructure:"JWT_SECRET"`
-	}
+		Secret string `mapstructure:"secret"`
+	} `mapstructure:"jwt"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -37,25 +38,26 @@ func LoadConfig() (*Config, error) {
 
 	v.AddConfigPath(".")
 	v.AddConfigPath("..")
-	v.SetConfigType("env")
-	v.SetConfigName(".env")
 
-	v.SetDefault("SERVER_HOST", "localhost")
-	v.SetDefault("SERVER_PORT", 8080)
-	v.SetDefault("LOGGER_LEVEL", "info")
+	v.SetConfigType("yaml")
+	v.SetConfigName("config") // без расширения
 
+	// Читаем конфигурационный файл
 	if err := v.ReadInConfig(); err != nil {
-		log.Fatalf("failed read config: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("failed reading config: %w", err)
 	}
 
+	// Также читаем переменные окружения (имеют приоритет над файлом)
 	v.AutomaticEnv()
 
 	var cfg Config
 
 	if err := v.Unmarshal(&cfg); err != nil {
-		log.Fatalf("failed mapping env to config struct: %v", err)
+		return nil, fmt.Errorf("failed mapping config to struct: %w", err)
 	}
+
+	log.Printf("Loaded config: DB_HOST=%s, DB_PORT=%d, DB_USER=%s",
+		cfg.DB.Host, cfg.DB.Port, cfg.DB.User)
 
 	return &cfg, nil
 }

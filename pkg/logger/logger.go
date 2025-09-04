@@ -2,20 +2,19 @@ package logger
 
 import (
 	"auth-service/pkg/config"
-	"fmt"
 	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
-func LoggerInit(cfg *config.Config) (*logrus.Logger, error) {
+func LoggerInit(cfg *config.Config) *logrus.Logger {
 	log := logrus.New()
 
 	log.SetFormatter(&logrus.JSONFormatter{})
 
 	level, err := logrus.ParseLevel(cfg.Logger.Level)
 	if err != nil {
-		return nil, fmt.Errorf("failed parse log level: %w", err)
+		level = logrus.InfoLevel
 	}
 
 	log.SetLevel(level)
@@ -26,5 +25,7 @@ func LoggerInit(cfg *config.Config) (*logrus.Logger, error) {
 		"service": "auth-service",
 	}).Logger
 
-	return log, nil
+	log.WithField("service", "auth-service").Info("Logger initialized")
+
+	return log
 }

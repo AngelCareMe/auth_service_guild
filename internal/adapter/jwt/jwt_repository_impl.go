@@ -11,10 +11,10 @@ import (
 
 type jwtRepository struct {
 	log *logrus.Logger
-	cfg config.Config
+	cfg *config.Config
 }
 
-func NewJWTRepository(log *logrus.Logger, cfg config.Config) *jwtRepository {
+func NewJWTRepository(log *logrus.Logger, cfg *config.Config) *jwtRepository {
 	return &jwtRepository{
 		log: log,
 		cfg: cfg,
@@ -65,11 +65,7 @@ func (jr *jwtRepository) ValidateJWT(tokenStr string) (*jwt.Token, error) {
 		return []byte(jr.cfg.JWT.Secret), nil
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	if !token.Valid {
+	if err != nil || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
 
