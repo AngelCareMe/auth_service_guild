@@ -5,8 +5,8 @@ import (
 )
 
 type BlizzardToken struct {
-	UserID       string    `json:"user_id" db:"battletag"`
-	BlizzardID   int       `json:"blizzard_id" db:"blizzard_id"`
+	UserID       string    `json:"user_id" db:"user_id"`
+	BlizzardID   string    `json:"blizzard_id" db:"blizzard_id"`
 	AccessToken  string    `json:"access_token" db:"access_token"`
 	RefreshToken string    `json:"refresh_token" db:"refresh_token"`
 	Expiry       time.Time `json:"expiry" db:"expiry"`

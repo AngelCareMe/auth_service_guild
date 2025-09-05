@@ -8,11 +8,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 )
+
+type dtoBlizzUser struct {
+	ID        int    `json:"id" db:"id"`
+	BattleTag string `json:"battletag" db:"battletag"`
+}
 
 type blizzardRepository struct {
 	client *http.Client
@@ -100,9 +106,15 @@ func (br *blizzardRepository) GetUser(ctx context.Context, token string) (*entit
 		return nil, err
 	}
 
-	bu := &entity.BlizzardUser{}
-	if err := json.Unmarshal(body, bu); err != nil {
+	dto := &dtoBlizzUser{}
+
+	if err := json.Unmarshal(body, dto); err != nil {
 		return nil, err
+	}
+
+	bu := &entity.BlizzardUser{
+		ID:        strconv.Itoa(dto.ID),
+		BattleTag: dto.BattleTag,
 	}
 
 	return bu, nil

@@ -40,14 +40,12 @@ func LoadConfig() (*Config, error) {
 	v.AddConfigPath("..")
 
 	v.SetConfigType("yaml")
-	v.SetConfigName("config") // без расширения
+	v.SetConfigName("config")
 
-	// Читаем конфигурационный файл
 	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("failed reading config: %w", err)
 	}
 
-	// Также читаем переменные окружения (имеют приоритет над файлом)
 	v.AutomaticEnv()
 
 	var cfg Config

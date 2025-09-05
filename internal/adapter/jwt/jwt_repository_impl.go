@@ -21,7 +21,7 @@ func NewJWTRepository(log *logrus.Logger, cfg *config.Config) *jwtRepository {
 	}
 }
 
-func (jr *jwtRepository) GenerateAccessJWT(blizzardID int) (string, error) {
+func (jr *jwtRepository) GenerateAccessJWT(blizzardID string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": blizzardID,
 		"exp": jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
@@ -64,7 +64,6 @@ func (jr *jwtRepository) ValidateJWT(tokenStr string) (*jwt.Token, error) {
 		}
 		return []byte(jr.cfg.JWT.Secret), nil
 	})
-
 	if err != nil || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
@@ -72,7 +71,7 @@ func (jr *jwtRepository) ValidateJWT(tokenStr string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (jr *jwtRepository) GetUserIDByToken(token string) (any, error) {
+func (jr *jwtRepository) GetUserIDByToken(token string) (string, error) {
 	jwtToken, err := jr.ValidateJWT(token)
 	if jwtToken != nil && !jwtToken.Valid {
 		return "", err
@@ -92,17 +91,17 @@ func (jr *jwtRepository) GetUserIDByToken(token string) (any, error) {
 	case "refresh":
 		userID, ok := claims["sub"].(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to extract user ID")
+			return "", fmt.Errorf("failed to extract user ID")
 		}
 		return userID, nil
 	case "access":
 
-		blizzardID, ok := claims["sub"].(float64)
+		blizzardID, ok := claims["sub"].(string)
 		if !ok {
-			return nil, fmt.Errorf("failed to extract blizzard ID")
+			return "", fmt.Errorf("failed to extract blizzard ID")
 		}
-		return int(blizzardID), nil
+		return blizzardID, nil
 	default:
-		return nil, fmt.Errorf("unsupported token type: %s", tokenType)
+		return "", fmt.Errorf("unsupported token type: %s", tokenType)
 	}
 }

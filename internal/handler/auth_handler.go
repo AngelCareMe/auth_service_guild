@@ -70,14 +70,15 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 
 func (h *AuthHandler) GetUser(c *gin.Context) {
 	ctx := c.Request.Context()
+	blizzID := c.GetString("blizzard_id")
 	jwtToken := c.GetHeader("Authorization")
 	accessStr := strings.TrimPrefix(jwtToken, "Bearer ")
 
-	user, err := h.uc.GetUser(ctx, accessStr)
+	user, err := h.uc.GetBlizzardUser(ctx, accessStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"id": user.ID, "battletag": user.BattleTag})
+	c.JSON(http.StatusOK, gin.H{"id": blizzID, "battletag": user.BattleTag})
 }

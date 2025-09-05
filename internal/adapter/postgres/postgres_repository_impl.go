@@ -42,7 +42,7 @@ func (pg *postgresRepository) SaveUser(ctx context.Context, userID, battletag st
 	return nil
 }
 
-func (pg *postgresRepository) SaveBlizzardUser(ctx context.Context, userID int, battletag string) error {
+func (pg *postgresRepository) SaveBlizzardUser(ctx context.Context, userID string, battletag string) error {
 	query, args, err := psql.
 		Insert("blizzard_users").
 		Columns("id", "battletag").
@@ -61,7 +61,7 @@ func (pg *postgresRepository) SaveBlizzardUser(ctx context.Context, userID int, 
 	return nil
 }
 
-func (pg *postgresRepository) SaveBlizzardToken(ctx context.Context, userID string, blizzardID int, token *entity.BlizzardToken) error {
+func (pg *postgresRepository) SaveBlizzardToken(ctx context.Context, userID string, blizzardID string, token *entity.BlizzardToken) error {
 	query, args, err := psql.
 		Insert("blizzard_tokens").
 		Columns(
@@ -140,6 +140,26 @@ func (pg *postgresRepository) GetBlizzardUser(ctx context.Context, battletag str
 		Select("id", "battletag").
 		From("blizzard_users").
 		Where(sq.Eq{"battletag": battletag}).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var buser entity.BlizzardUser
+
+	if err := pg.pool.QueryRow(ctx, query, args...).Scan(&buser.ID, &buser.BattleTag); err != nil {
+		return nil, err
+	}
+
+	return &buser, nil
+}
+
+func (pg *postgresRepository) GetBlizzardUserByID(ctx context.Context, blizzardID string) (*entity.BlizzardUser, error) {
+	query, args, err := psql.
+		Select("id", "battletag").
+		From("blizzard_users").
+		Where(sq.Eq{"id": blizzardID}).
 		ToSql()
 
 	if err != nil {

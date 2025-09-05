@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS blizzard_users (
 CREATE TABLE IF NOT EXISTS jwt_tokens (
     user_id TEXT PRIMARY KEY,
     battletag TEXT NOT NULL,
-    access_token TEXT NOT NULL,
     refresh_token TEXT NOT NULL,
     expiry TIMESTAMP NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

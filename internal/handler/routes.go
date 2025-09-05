@@ -23,7 +23,7 @@ func SetupRoutes(
 		})
 	})
 
-	router.GET("auth/login", h.Login)
+	router.GET("/auth/login", h.Login)
 	router.GET("/callback", h.Callback)
 
 	authProtected := router.Group("/auth")

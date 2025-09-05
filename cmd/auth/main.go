@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,7 +32,7 @@ import (
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		panic("load config err")
+		log.Fatalf("load config error")
 	}
 
 	log := logger.LoggerInit(cfg)
@@ -40,7 +41,7 @@ func main() {
 	dsn := dbpool.BuildDSN(cfg)
 	pool, err := dbpool.InitDBPool(dsn, log, ctx)
 	if err != nil {
-		log.WithError(err).Error("failed init db pool")
+		log.WithError(err).Error("failed init db pool: %w", err)
 	}
 	defer pool.Close()
 
@@ -96,7 +97,7 @@ func runMigrations(pool *pgxpool.Pool, log *logrus.Logger) error {
 		}
 	}()
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{}) // Или SchemaName: "auth" если нужно
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("create migrate driver: %w", err)
 	}
@@ -115,10 +116,8 @@ func runMigrations(pool *pgxpool.Pool, log *logrus.Logger) error {
 		}
 	}()
 
-	// Добавьте лог перед применением
 	log.Info("Applying migrations...")
 
-	// Retry для flaky сетей/Docker (опционально, импортируйте retry-go)
 	var migErr error
 	err = retry.Do(
 		func() error {

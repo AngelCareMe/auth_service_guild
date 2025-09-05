@@ -43,13 +43,13 @@ func InitDBPool(dsn string, log *logrus.Logger, ctx context.Context) (*pgxpool.P
 
 	config.MaxConns = 10
 	config.HealthCheckPeriod = 1 * time.Minute
-	config.MaxConnLifetime = 30 * time.Second
+	config.MaxConnLifetime = 1 * time.Hour
 	config.MaxConnIdleTime = 5 * time.Second
-	config.MinIdleConns = 5
+	config.MinIdleConns = 2
 
 	var pool *pgxpool.Pool
 	for i := 0; i < maxRetries; i++ {
-		pool, err = pgxpool.NewWithConfig(context.Background(), config)
+		pool, err = pgxpool.NewWithConfig(ctx, config)
 		if err == nil {
 			if err = pool.Ping(ctx); err == nil {
 				log.Info("Pool initialize succeeded")
@@ -62,6 +62,8 @@ func InitDBPool(dsn string, log *logrus.Logger, ctx context.Context) (*pgxpool.P
 		}).Error("failed create new pool with config")
 		time.Sleep(5 * time.Second)
 	}
+
+	defer pool.Close()
 
 	log.Errorf("failed connect to Database: %v", err)
 	return nil, err
