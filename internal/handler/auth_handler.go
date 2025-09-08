@@ -82,3 +82,17 @@ func (h *AuthHandler) GetUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"id": blizzID, "battletag": user.BattleTag})
 }
+
+func (h *AuthHandler) GetBlizzardToken(c *gin.Context) {
+	ctx := c.Request.Context()
+	jwtToken := c.GetHeader("Authorization")
+	accessStr := strings.TrimPrefix(jwtToken, "Bearer ")
+
+	blizzTkn, err := h.uc.GetBlizzardToken(ctx, accessStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid access token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"access": blizzTkn})
+}

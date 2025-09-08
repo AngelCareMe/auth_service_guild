@@ -10,4 +10,5 @@ type AuthUsecase interface {
 	RefreshTokens(ctx context.Context, refreshToken string) (string, string, error)
 	HandleCallback(ctx context.Context, code string) (string, string, error)
 	GetBlizzardUser(ctx context.Context, jwtAccess string) (*entity.BlizzardUser, error)
+	GetBlizzardToken(ctx context.Context, jwtAccess string) (string, error)
 }

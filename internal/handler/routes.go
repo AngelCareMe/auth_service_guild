@@ -30,4 +30,5 @@ func SetupRoutes(
 	authProtected.Use(AuthMiddleware(cfg.JWT.Secret))
 	authProtected.POST("/refresh", h.Refresh)
 	authProtected.GET("/user", h.GetUser)
+	authProtected.GET("/blizzard/token", h.GetBlizzardToken)
 }

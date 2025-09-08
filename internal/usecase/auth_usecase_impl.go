@@ -187,6 +187,37 @@ func (uc *authUsecase) ValidateAccess(ctx context.Context, accessToken string) (
 	return blizzardID, nil
 }
 
+func (uc *authUsecase) GetBlizzardToken(ctx context.Context, jwtAccess string) (string, error) {
+	token, err := uc.jwtAd.ValidateJWT(jwtAccess)
+	if err != nil {
+		return "", err
+	}
+
+	claim := token.Claims.(jwtPkg.MapClaims)
+	blizzardID, err := ExtractSub(claim, "access")
+	if err != nil {
+		return "", err
+	}
+
+	blizzToken, err := uc.dbAd.GetBlizzardToken(ctx, blizzardID)
+	if err != nil {
+		return "", err
+	}
+
+	if time.Now().After(blizzToken.Expiry) {
+		newBt, err := uc.blizzardAd.RefreshToken(ctx, blizzToken.RefreshToken)
+		if err != nil {
+			return "", err
+		}
+		if err := uc.dbAd.SaveBlizzardToken(ctx, blizzToken.UserID, blizzardID, newBt); err != nil {
+			return "", err
+		}
+		blizzToken = newBt
+	}
+
+	return blizzToken.AccessToken, nil
+}
+
 func (uc *authUsecase) GetBlizzardUser(ctx context.Context, jwtAccess string) (*entity.BlizzardUser, error) {
 	if jwtAccess == "" {
 		return nil, fmt.Errorf("empty token")
