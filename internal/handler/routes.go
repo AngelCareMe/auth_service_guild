@@ -27,8 +27,11 @@ func SetupRoutes(
 	router.GET("/callback", h.Callback)
 
 	authProtected := router.Group("/auth")
-	authProtected.Use(AuthMiddleware(cfg.JWT.Secret))
-	authProtected.POST("/refresh", h.Refresh)
+	authProtected.Use(AuthMiddleware(cfg.JWT.Secret, false))
 	authProtected.GET("/user", h.GetUser)
 	authProtected.GET("/blizzard/token", h.GetBlizzardToken)
+
+	refreshGroup := router.Group("/auth")
+	refreshGroup.Use(AuthMiddleware(cfg.JWT.Secret, true))
+	authProtected.POST("/refresh", h.Refresh)
 }

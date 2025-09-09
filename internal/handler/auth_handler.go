@@ -45,6 +45,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) Callback(c *gin.Context) {
 	ctx := c.Request.Context()
 	code := c.Query("code")
+	state := c.Query("state")
+
+	if state == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing state"})
+		return
+	}
 
 	jwtAccess, jwtRefresh, err := h.uc.HandleCallback(ctx, code)
 	if err != nil {
@@ -85,10 +91,9 @@ func (h *AuthHandler) GetUser(c *gin.Context) {
 
 func (h *AuthHandler) GetBlizzardToken(c *gin.Context) {
 	ctx := c.Request.Context()
-	jwtToken := c.GetHeader("Authorization")
-	accessStr := strings.TrimPrefix(jwtToken, "Bearer ")
+	blizzID := c.GetString("blizzard_id")
 
-	blizzTkn, err := h.uc.GetBlizzardToken(ctx, accessStr)
+	blizzTkn, err := h.uc.GetBlizzardToken(ctx, blizzID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid access token"})
 		return

@@ -111,7 +111,7 @@ func (uc *authUsecase) RefreshTokens(ctx context.Context, refreshToken string) (
 		return "", "", err
 	}
 
-	blizzardToken, err := uc.dbAd.GetBlizzardToken(ctx, userID)
+	blizzardToken, err := uc.dbAd.GetBlizzardTokenByUserID(ctx, userID)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get blizzard token: %w", err)
 	}
@@ -122,7 +122,9 @@ func (uc *authUsecase) RefreshTokens(ctx context.Context, refreshToken string) (
 			return "", "", err
 		}
 
-		if err := uc.dbAd.SaveBlizzardToken(ctx, userID, newBt.BlizzardID, newBt); err != nil {
+		newBt.UserID = blizzardToken.UserID
+		newBt.BlizzardID = blizzardToken.BlizzardID
+		if err := uc.dbAd.SaveBlizzardToken(ctx, userID, blizzardToken.BlizzardID, newBt); err != nil {
 			return "", "", err
 		}
 		blizzardToken = newBt
@@ -187,19 +189,8 @@ func (uc *authUsecase) ValidateAccess(ctx context.Context, accessToken string) (
 	return blizzardID, nil
 }
 
-func (uc *authUsecase) GetBlizzardToken(ctx context.Context, jwtAccess string) (string, error) {
-	token, err := uc.jwtAd.ValidateJWT(jwtAccess)
-	if err != nil {
-		return "", err
-	}
-
-	claim := token.Claims.(jwtPkg.MapClaims)
-	blizzardID, err := ExtractSub(claim, "access")
-	if err != nil {
-		return "", err
-	}
-
-	blizzToken, err := uc.dbAd.GetBlizzardToken(ctx, blizzardID)
+func (uc *authUsecase) GetBlizzardToken(ctx context.Context, blizzID string) (string, error) {
+	blizzToken, err := uc.dbAd.GetBlizzardTokenByBlizzID(ctx, blizzID)
 	if err != nil {
 		return "", err
 	}
@@ -209,7 +200,10 @@ func (uc *authUsecase) GetBlizzardToken(ctx context.Context, jwtAccess string) (
 		if err != nil {
 			return "", err
 		}
-		if err := uc.dbAd.SaveBlizzardToken(ctx, blizzToken.UserID, blizzardID, newBt); err != nil {
+
+		newBt.UserID = blizzToken.UserID
+		newBt.BlizzardID = blizzID
+		if err := uc.dbAd.SaveBlizzardToken(ctx, blizzToken.UserID, blizzID, newBt); err != nil {
 			return "", err
 		}
 		blizzToken = newBt

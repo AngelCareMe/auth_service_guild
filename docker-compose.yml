@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:16
@@ -15,27 +17,30 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - backend
+      - shared-backend  # Используем внешнюю сеть
     ports:
       - "5432:5432"
 
   auth_service:
     build:
+      context: .
       dockerfile: Dockerfile
     restart: on-failure
     env_file: .env
     environment:
-      - DB_HOST=${DB_HOST}
+      - DB_HOST=postgres
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - backend
+      - shared-backend  # Та же внешняя сеть
     ports:
       - "8080:8080"
 
 networks:
-  backend:
+  shared-backend:
+    external:
+      name: shared-backend-network  # Указываем имя внешней сети
 
 volumes:
   pgdata:

@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(secret string) gin.HandlerFunc {
+func AuthMiddleware(secret string, allowRefresh bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -35,14 +34,25 @@ func AuthMiddleware(secret string) gin.HandlerFunc {
 			return
 		}
 
-		claims := token.Claims.(jwt.MapClaims)
-		if exp, ok := claims["exp"].(float64); !ok || time.Unix(int64(exp), 0).Before(time.Now()) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid claims"})
 			return
 		}
 
-		if blizzID, ok := claims["sub"].(string); ok {
-			c.Set("blizzard_id", blizzID)
+		if !allowRefresh {
+			typ, ok := claims["typ"].(string)
+			if !ok || typ != "access" {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
+				return
+			}
+			if blizzID, ok := claims["sub"].(string); ok {
+				c.Set("blizzard_id", blizzID)
+			}
+		} else {
+			if userID, ok := claims["sub"].(string); ok {
+				c.Set("user_id", userID)
+			}
 		}
 		c.Next()
 	}

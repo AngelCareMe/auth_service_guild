@@ -13,6 +13,7 @@ type PostgresRepository interface {
 	GetUser(ctx context.Context, battletag string) (*entity.User, error)
 	GetBlizzardUser(ctx context.Context, battletag string) (*entity.BlizzardUser, error)
 	GetBlizzardUserByID(ctx context.Context, blizzardID string) (*entity.BlizzardUser, error)
-	GetBlizzardToken(ctx context.Context, userID string) (*entity.BlizzardToken, error)
+	GetBlizzardTokenByUserID(ctx context.Context, userID string) (*entity.BlizzardToken, error)
 	GetJWTToken(ctx context.Context, userID string) (*entity.JWTToken, error)
+	GetBlizzardTokenByBlizzID(ctx context.Context, blizzID string) (*entity.BlizzardToken, error)
 }

@@ -176,7 +176,7 @@ func (pg *postgresRepository) GetBlizzardUserByID(ctx context.Context, blizzardI
 	return &buser, nil
 }
 
-func (pg *postgresRepository) GetBlizzardToken(ctx context.Context, userID string) (*entity.BlizzardToken, error) {
+func (pg *postgresRepository) GetBlizzardTokenByUserID(ctx context.Context, userID string) (*entity.BlizzardToken, error) {
 	query, args, err := psql.
 		Select(
 			"user_id",
@@ -188,6 +188,40 @@ func (pg *postgresRepository) GetBlizzardToken(ctx context.Context, userID strin
 		).
 		From("blizzard_tokens").
 		Where(sq.Eq{"user_id": userID}).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var bt entity.BlizzardToken
+	if err = pg.pool.QueryRow(ctx, query, args...).
+		Scan(
+			&bt.UserID,
+			&bt.BlizzardID,
+			&bt.AccessToken,
+			&bt.RefreshToken,
+			&bt.Expiry,
+			&bt.TokenType,
+		); err != nil {
+		return nil, err
+	}
+
+	return &bt, nil
+}
+
+func (pg *postgresRepository) GetBlizzardTokenByBlizzID(ctx context.Context, blizzID string) (*entity.BlizzardToken, error) {
+	query, args, err := psql.
+		Select(
+			"user_id",
+			"blizzard_id",
+			"access_token",
+			"refresh_token",
+			"expiry",
+			"token_type",
+		).
+		From("blizzard_tokens").
+		Where(sq.Eq{"blizzard_id": blizzID}).
 		ToSql()
 
 	if err != nil {
