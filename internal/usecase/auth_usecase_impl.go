@@ -195,14 +195,16 @@ func (uc *authUsecase) GetBlizzardToken(ctx context.Context, blizzID string) (st
 		return "", err
 	}
 
-	if time.Now().After(blizzToken.Expiry) {
+	_, err = uc.blizzardAd.GetUser(ctx, blizzToken.AccessToken)
+	if err != nil {
+		uc.log.WithError(err).WithField("blizzard_id", blizzID).Warn("Blizzard token was expiry, refreshing...")
 		newBt, err := uc.blizzardAd.RefreshToken(ctx, blizzToken.RefreshToken)
 		if err != nil {
 			return "", err
 		}
 
 		newBt.UserID = blizzToken.UserID
-		newBt.BlizzardID = blizzID
+		newBt.BlizzardID = blizzToken.BlizzardID
 		if err := uc.dbAd.SaveBlizzardToken(ctx, blizzToken.UserID, blizzID, newBt); err != nil {
 			return "", err
 		}
