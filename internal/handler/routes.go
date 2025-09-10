@@ -33,5 +33,5 @@ func SetupRoutes(
 
 	refreshGroup := router.Group("/auth")
 	refreshGroup.Use(AuthMiddleware(cfg.JWT.Secret, true))
-	authProtected.POST("/refresh", h.Refresh)
+	refreshGroup.POST("/refresh", h.Refresh)
 }
