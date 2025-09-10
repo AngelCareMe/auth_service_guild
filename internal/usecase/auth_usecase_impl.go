@@ -48,8 +48,15 @@ func (uc *authUsecase) HandleCallback(ctx context.Context, code string) (string,
 
 	bUser, err := uc.blizzardAd.GetUser(ctx, bt.AccessToken)
 	if err != nil {
+		uc.log.WithError(err).Error("Failed to get user after token exchange")
 		return "", "", err
 	}
+	uc.log.WithFields(logrus.Fields{
+		"blizzard_id": bUser.ID,
+		"battletag":   bUser.BattleTag,
+	}).Info("Got Blizzard user")
+
+	bt.BlizzardID = bUser.ID
 
 	existingUser, err := uc.dbAd.GetUser(ctx, bUser.BattleTag)
 	var userID string
@@ -58,8 +65,11 @@ func (uc *authUsecase) HandleCallback(ctx context.Context, code string) (string,
 		if err := uc.dbAd.SaveUser(ctx, userID, bUser.BattleTag); err != nil {
 			return "", "", err
 		}
+		uc.log.Info("Created new user: " + userID)
 	} else {
 		userID = existingUser.ID
+		uc.log.Info("Used existing user: " + userID)
+
 	}
 
 	if err := uc.dbAd.SaveBlizzardUser(ctx, bUser.ID, bUser.BattleTag); err != nil {
@@ -67,8 +77,10 @@ func (uc *authUsecase) HandleCallback(ctx context.Context, code string) (string,
 	}
 
 	if err := uc.dbAd.SaveBlizzardToken(ctx, userID, bt.BlizzardID, bt); err != nil {
+		uc.log.WithError(err).Error("Failed to save Blizzard token")
 		return "", "", err
 	}
+	uc.log.Info("Saved Blizzard token for user: " + userID + ", blizzard_id: " + bt.BlizzardID)
 
 	jwtAccess, err := uc.jwtAd.GenerateAccessJWT(bUser.ID)
 	if err != nil {
@@ -190,8 +202,10 @@ func (uc *authUsecase) ValidateAccess(ctx context.Context, accessToken string) (
 }
 
 func (uc *authUsecase) GetBlizzardToken(ctx context.Context, blizzID string) (string, error) {
+	uc.log.WithField("blizz_id", blizzID).Info("Getting Blizzard token")
 	blizzToken, err := uc.dbAd.GetBlizzardTokenByBlizzID(ctx, blizzID)
 	if err != nil {
+		uc.log.WithError(err).WithField("blizz_id", blizzID).Error("Failed to get Blizzard token from DB")
 		return "", err
 	}
 

@@ -66,16 +66,16 @@ func (br *blizzardRepository) HandleCallback(ctx context.Context, code string) (
 	}
 	token, err := br.oauth.Exchange(ctx, code)
 	if err != nil {
+		br.log.WithError(err).Error("Failed to exchange code for token")
 		return nil, err
 	}
-
-	user, err := br.GetUser(ctx, token.AccessToken)
-	if err != nil {
-		return nil, err
-	}
+	br.log.WithFields(logrus.Fields{
+		"access_token": token.AccessToken[:10] + "...",
+		"has_refresh":  token.RefreshToken != "",
+		"expiry":       token.Expiry,
+	}).Info("Exchanged code for Blizzard token")
 
 	bt := &entity.BlizzardToken{
-		BlizzardID:   user.ID,
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
 		TokenType:    token.TokenType,
